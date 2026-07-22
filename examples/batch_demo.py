@@ -65,12 +65,12 @@ def main():
         users=["batch-op"] * 3,
         max_workers=3,
     )
-    print(f"  total: {batch['total']}  succeeded: {batch['succeeded']}  failed: {batch['failed']}")
-    print(f"  duration: {batch['duration_seconds']:.2f}s")
-    for it in batch["items"]:
-        r = it["result"]
-        print(f"  {it['share']}: {r['objects_transferred']}t / {r['objects_skipped']}s / "
-              f"{len(r['errors'])}err  (user={it['user']})")
+    print(f"  total: {batch.total}  succeeded: {batch.succeeded}  failed: {batch.failed}")
+    print(f"  duration: {batch.finished_at - batch.started_at:.2f}s")
+    for it in batch.items:
+        r = it.result
+        print(f"  {it.share.name}: {r.objects_transferred}t / {r.objects_skipped}s / "
+              f"{len(r.errors)}err  (user={it.user})")
     print(f"  total batch: {time.time() - t0:.2f}s")
 
     # 3. Show one masked file
