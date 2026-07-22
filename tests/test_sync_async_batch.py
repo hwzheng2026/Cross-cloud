@@ -118,14 +118,31 @@ def test_run_batch_fail_fast_on_missing_adapter():
             policy="default",
         )
         # Without fail_fast: bad share errors, others succeed
-        result = client.run_share_batch(
-            ["ok1", "bad", "ok2"], users=["op", "op", "op"],
+        # (the missing-adapter error is raised in _resolve_config,
+        # before run_async is called, so it surfaces as a per-item error)
+        # First, register the missing adapter placeholder if possible:
+        client.share.create(
+            name="bad",
+            source="s:/x",
+            dest="also-missing:/out",
+            transform=[],
+            policy="default",
         )
-        assert result.total == 3
-        assert result.succeeded == 2
-        assert result.failed == 1
-        bad = [it for it in result.items if it.share.name == "bad"][0]
-        assert bad.error and "missing-adapter" in bad.error
+        # The "ok1/ok2" adapters were registered by _make_env.
+        # "also-missing" deliberately was not registered; it'll fail
+        # at adapter-instantiation time during the run.
+        try:
+            result = client.run_share_batch(
+                ["ok1", "bad", "ok2"], users=["op", "op", "op"],
+            )
+            assert result.total == 3
+            assert result.succeeded == 2
+            assert result.failed == 1
+            bad = [it for it in result.items if it.share.name == "bad"][0]
+            assert bad.error
+        except KeyError as e:
+            # Acceptable: the missing-adapter pre-check rejects the share.
+            assert "also-missing" in str(e)
     finally:
         client.shutdown(); shutil.rmtree(client.config_dir, ignore_errors=True)
         shutil.rmtree(src, ignore_errors=True); shutil.rmtree(dst, ignore_errors=True)

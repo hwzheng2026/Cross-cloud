@@ -66,19 +66,19 @@ class CDEHClient:
         return dict(self._adapters)
 
     def register_adapter(self, name: str, kind: str, **config) -> None:
-        from ..adapters import registry as adapter_registry
-        # Force-load the adapter modules so registry is populated.
-        from ..adapters import (  # noqa: F401
-            local, s3, azure_blob, sftp, mysql,
-        )
-        if kind not in adapter_registry:
+        from ..adapters import get as _get_adapter
+        # Force-load the adapter module so the registry is populated.
+        # The lazy loader raises a friendly ImportError if the cloud
+        # SDK isn't installed.
+        try:
+            _get_adapter(kind)
+        except Exception as e:
             raise ValueError(
-                f"unknown adapter kind: {kind}. "
-                f"available: {sorted(adapter_registry)}"
-            )
+                f"unknown adapter kind: {kind}. {e}"
+            ) from e
         cfg = {"kind": kind, **config}
         # Sanity-check the config builds an adapter
-        adapter_registry[kind].from_config({k: v for k, v in cfg.items() if k != "kind"})
+        _get_adapter(kind).from_config({k: v for k, v in cfg.items() if k != "kind"})
         self._adapters[name] = cfg
         self._save_adapters()
         self.audit.append(user="system", action="adapter.register",
