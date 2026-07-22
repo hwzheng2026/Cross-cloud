@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdeh"
+version = "0.1.0"
+description = "Cross-Cloud Data Exchange Hub - plugin-based, secure, high-performance data sharing for industrial-internet cross-cloud environments."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [{name = "hwzheng2026"}]
+keywords = ["data", "etl", "cross-cloud", "aws-s3", "azure-blob", "sftp", "mysql", "data-sharing"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: POSIX :: Linux",
+]
+
+# Hard dep is only what's required for the local adapter + CLI to work.
+# Cloud SDKs are optional — install the ones you need:
+#   pip install cdeh[s3]      # AWS S3 / MinIO / Aliyun OSS / Tencent COS
+#   pip install cdeh[azure]   # Azure Blob
+#   pip install cdeh[sftp]    # SFTP (paramiko)
+#   pip install cdeh[mysql]   # MySQL (PyMySQL)
+#   pip install cdeh[parquet] # Parquet codec (pyarrow)
+#   pip install cdeh[all]     # all of the above
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+s3 = ["boto3>=1.26.0"]
+azure = ["azure-storage-blob>=12.14.0", "azure-core>=1.26.0"]
+sftp = ["paramiko>=3.0"]
+mysql = ["PyMySQL>=1.0.0"]
+parquet = ["pyarrow>=12.0.0"]
+dev = ["pytest>=7.0", "build>=0.10", "twine>=4.0"]
+all = ["boto3>=1.26.0", "azure-storage-blob>=12.14.0", "azure-core>=1.26.0",
+       "paramiko>=3.0", "PyMySQL>=1.0.0", "pyarrow>=12.0.0"]
+
+[project.scripts]
+cdeh = "cdeh.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hwzheng2026/cdeh"
+Repository = "https://github.com/hwzheng2026/cdeh.git"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cdeh*"]
+exclude = ["tests*", "examples*", "docs*", "deploy*", "scripts*"]

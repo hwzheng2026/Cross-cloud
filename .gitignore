@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+.tox/
+.nox/
+*.pyo
+
+# Local adapter sandbox files (used by tests; never commit)
+sandbox_*/
+*.tmp
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Distribution / build
+build/
+dist/
+
+# Node (for the solc-pkg dev dep)
+node_modules/
+npm-debug.log*
+
+# Local CLI / secret files (adapters.json holds cloud creds)
+adapters.json
+adapters.local.json
+
+# Runtime: never commit these — runtime state files
+audit.log
+audit.log.*
+catalog.json
+users.json
+shares/
+checkpoints/
+checkpoints.db

@@ -1,0 +1,57 @@
+version: "3.9"
+
+# Local-only demo stack for C-DEH.
+# - Two MinIO instances simulate two different cloud object stores
+#   (use the same S3 API; we distinguish by endpoint).
+# - The cdeh-server reads its config from a bind-mounted directory
+#   so the demo can `cdeh adapter register` without rebuilding the image.
+
+services:
+  minio-source:
+    image: minio/minio:latest
+    container_name: cdeh-minio-source
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API
+      - "9090:9001"   # web console
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      retries: 20
+
+  minio-target:
+    image: minio/minio:latest
+    container_name: cdeh-minio-target
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9100:9000"   # S3 API (note: host port differs from source)
+      - "9091:9001"   # web console
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      retries: 20
+
+  cdeh-server:
+    build: ..
+    container_name: cdeh-gateway
+    depends_on:
+      minio-source:
+        condition: service_healthy
+      minio-target:
+        condition: service_healthy
+    environment:
+      HOME: /home/cdeh
+    volumes:
+      - cdeh_data:/home/cdeh/.cdeh
+    ports:
+      - "8080:8080"
+    command: ["cdeh", "serve", "--host", "0.0.0.0", "--port", "8080"]
+
+volumes:
+  cdeh_data:
