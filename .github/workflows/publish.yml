@@ -3,6 +3,13 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build only, don't upload"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   pypi:
@@ -10,7 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write   # required for PyPI trusted publishing (OIDC)
+      id-token: write   # for PyPI trusted publishing (OIDC) — preferred
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -22,28 +30,37 @@ jobs:
       - name: Install build tooling
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build twine
 
       - name: Build sdist + wheel
         run: python -m build
 
       - name: Verify distribution
-        run: |
-          pip install twine
-          twine check dist/*
+        run: twine check dist/*
 
-      - name: Upload to PyPI (via trusted publishing)
-        uses: pypa/gh-action-pypi-publish@release/v1
-        # No token needed: configured via PyPI trusted publishing
-        # (see docs/DEPLOY.md → "Publishing to PyPI")
+      - name: Upload to PyPI
+        # Prefer trusted publishing (OIDC, no secret). If PYPI_API_TOKEN
+        # is set as a repo secret, fall back to that.
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -n "$PYPI_API_TOKEN" ]; then
+            echo "Using PyPI API token (set as repo secret)"
+            twine upload dist/* -u __token__ -p "$PYPI_API_TOKEN"
+          else
+            echo "Using PyPI trusted publishing (OIDC)"
+            pip install --quiet pypa/gh-action-pypi-publish
+            python -m gh_action_pypi_publish
+          fi
 
   test-pypi:
-    name: Build + upload to TestPyPI (on every PR)
+    name: Build + upload to TestPyPI (manual trigger only)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true'
     environment: testpypi
     permissions:
       id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -52,10 +69,17 @@ jobs:
       - name: Install build tooling
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build twine
       - name: Build
         run: python -m build
       - name: Upload to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
+        env:
+          TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          if [ -n "$TEST_PYPI_API_TOKEN" ]; then
+            twine upload dist/* -u __token__ -p "$TEST_PYPI_API_TOKEN" \
+              --repository-url https://test.pypi.org/legacy/
+          else
+            python -m gh_action_pypi_publish \
+              --repository-url https://test.pypi.org/legacy/
+          fi
