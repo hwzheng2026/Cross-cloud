@@ -32,6 +32,7 @@ classifiers = [
 #   pip install cdeh[all]     # all of the above
 dependencies = [
     "PyYAML>=6.0",
+    "cryptography>=41.0.0",  # for the encrypt transformer (AES-GCM)
 ]
 
 [project.optional-dependencies]
