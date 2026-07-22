@@ -16,6 +16,11 @@ jobs:
     name: Build + upload to PyPI
     runs-on: ubuntu-latest
     environment: pypi
+    # Trigger on:
+    #   - release published  (production: when a release is cut)
+    #   - workflow_dispatch  (manual re-run, e.g. for retrying after
+    #                         PyPI trusted publisher is configured)
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
     permissions:
       id-token: write   # for PyPI trusted publishing (OIDC) — preferred
       contents: read
