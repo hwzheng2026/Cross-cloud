@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  smoke:
+    name: offline smoke tests (Linux + macOS + Windows)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package + test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[s3,parquet]"
+          pip install pytest
+
+      - name: Run smoke tests
+        run: |
+          pytest tests/ -v --tb=short
+
+  examples:
+    name: end-to-end examples
+    runs-on: ubuntu-latest
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[s3,parquet]"
+      - name: Run cross_cloud_share example
+        run: PYTHONPATH=. python examples/cross_cloud_share.py
+      - name: Run policy_demo example
+        run: PYTHONPATH=. python examples/policy_demo.py
+      - name: Run batch_demo example
+        run: PYTHONPATH=. python examples/batch_demo.py
+      - name: Run production_features_demo example
+        run: PYTHONPATH=. python examples/production_features_demo.py
